@@ -39,6 +39,11 @@
   function lsGet(k, d) { try { var v = JSON.parse(localStorage.getItem(k)); return v == null ? d : v; } catch (e) { return d; } }
   function lsSet(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
   function fmtDate(iso) { return iso.replace(/-/g, '.'); }
+  function dday(untilIso) {
+    var today = new Date(); today.setHours(0, 0, 0, 0);
+    var n = Math.round((new Date(untilIso + 'T00:00:00') - today) / 86400000);
+    return n > 0 ? 'D-' + n : 'D-DAY';
+  }
 
   function show(view) {
     $('#viewLoading').hidden = view !== 'loading';
@@ -146,16 +151,39 @@
       '<h2 class="section__title">' + t('sec.info') + '</h2>' +
       '<h3 class="sub-title">📍 ' + t('info.location') + '</h3>' + checks(b.location) +
       (expired ? '' :
-        '<div class="deal"><div class="deal__body"><a class="deal__link" href="' + esc(d.url) + '">⏭️ ' + esc(d.label) + '</a>' +
-        '<div class="deal__code">' + t('deal.until', { date: d.until.slice(5).replace('-', '/') }) + ' <b>' + esc(d.code) + '</b></div></div>' +
-        '<button class="chip-btn" id="btnCopyCode">' + t('deal.copy') + '</button></div>') +
+        '<div class="deal">' +
+        '<a class="deal__top" id="dealLink" href="' + esc(d.url) + '" target="_blank" rel="noopener sponsored">' +
+          '<span class="deal__plane" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M2.5 13.5l7-2 4.5-7.5 2 .5-2 7.5 5-1.5c1-.3 2 .4 2 1.4 0 .6-.4 1.1-1 1.3l-15.5 4.3-2-3.5z"/><path d="M4 20h16"/></svg></span>' +
+          '<span class="deal__main">' +
+            '<span class="deal__eyebrow">' + esc(d.partner) + ' · ' + t('deal.partner') + '</span>' +
+            '<strong class="deal__title">' + esc(d.label) + '</strong>' +
+            '<span class="deal__desc">' + esc(d.desc) + '</span>' +
+          '</span>' +
+          '<span class="deal__side"><span class="deal__dday">' + dday(d.until) + '</span>' +
+          '<span class="deal__go" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 17L17 7M9 7h8v8"/></svg></span></span>' +
+          '<span class="sr-only">' + t('deal.newWindow') + '</span>' +
+        '</a>' +
+        '<div class="deal__bottom">' +
+          '<span class="deal__codebox"><small>' + t('deal.codeLabel') + '</small><b>' + esc(d.code) + '</b></span>' +
+          '<span class="deal__until">' + t('deal.until', { date: d.until.slice(5).replace('-', '/') }) + '</span>' +
+          '<button class="deal__copy" id="btnCopyCode">' + t('deal.copy') + '</button>' +
+        '</div></div>') +
       '<h3 class="sub-title">🚆 ' + t('info.airport') + '</h3>' + checks(b.airport) +
       '<h3 class="sub-title">💳 ' + t('info.transit') + '</h3>' +
       '<p class="plan-info" style="margin:0 0 8px">' + t('info.transitDesc') + '</p>' +
       '<div class="pill-row">' + b.transit.map(function (x) { return '<span class="pill">' + esc(x) + '</span>'; }).join('') + '</div>' +
       '<h3 class="sub-title">💡 ' + t('info.tip') + '</h3><div class="callout">' + esc(b.tip) + '</div>';
     var btn = $('#btnCopyCode');
-    if (btn) btn.onclick = function () { copyText(d.code).then(function () { toast(t('deal.copied')); }); };
+    if (btn) btn.onclick = function () {
+      track('click_flight_deal', { guide_id: S.guide.guideId, action: 'copy_code' });
+      copyText(d.code).then(function () { toast(t('deal.copied')); });
+    };
+    var link = $('#dealLink');
+    // 링크 이동 시 할인코드도 함께 복사 → 결제 화면에서 바로 붙여넣기
+    if (link) link.onclick = function () {
+      track('click_flight_deal', { guide_id: S.guide.guideId, action: 'open_link', url: d.url });
+      copyText(d.code).then(function () { toast(t('deal.copiedOnOpen')); }).catch(function () {});
+    };
   }
 
   /* ============ 4.0.2 명소 ============ */

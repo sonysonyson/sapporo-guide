@@ -150,14 +150,68 @@ a { color: var(--primary); }
 }
 
 /* 항공권 딜 */
+/* 항공권 할인 카드 — 티켓형 (위: 제휴 링크 / 절취선 / 아래: 할인코드) */
 .deal {
-  margin-top: 14px; border: 1px dashed #f0a899; background: #fff6f4; border-radius: 12px;
-  padding: 12px 14px; display: flex; align-items: center; gap: 10px;
+  --deal-a: #1f5fd1; --deal-b: #3d8bff;
+  position: relative; margin-top: 16px; border-radius: 16px; overflow: hidden;
+  box-shadow: 0 8px 22px rgba(31, 95, 209, .22);
 }
-.deal__body { flex: 1; min-width: 0; }
-.deal__link { font-weight: 700; color: var(--accent); text-decoration: none; }
-.deal__code { font-size: 13px; color: var(--text-2); }
-.deal__code b { font-family: ui-monospace, Menlo, monospace; color: var(--text); letter-spacing: .05em; }
+.deal__top {
+  display: flex; align-items: center; gap: 12px; padding: 16px 16px 18px;
+  background: linear-gradient(120deg, var(--deal-a), var(--deal-b));
+  color: #fff; text-decoration: none; position: relative;
+}
+.deal__top::after { /* 은은한 항로 곡선 */
+  content: ''; position: absolute; right: -30px; top: -40px; width: 160px; height: 120px;
+  border: 2px dashed rgba(255, 255, 255, .22); border-radius: 50%; pointer-events: none;
+}
+.deal__top:active { filter: brightness(.95); }
+.deal__top:focus-visible { outline: 3px solid #ffd36b; outline-offset: -3px; }
+.deal__plane {
+  width: 44px; height: 44px; flex: none; border-radius: 12px; display: grid; place-items: center;
+  background: rgba(255, 255, 255, .18);
+}
+.deal__plane svg, .deal__go svg { width: 22px; height: 22px; fill: none; stroke: #fff; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.deal__main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.deal__eyebrow { font-size: 12px; font-weight: 500; opacity: .85; }
+.deal__title { font-size: 17px; font-weight: 800; line-height: 1.35; }
+.deal__desc { font-size: 12px; opacity: .85; line-height: 1.45; margin-top: 2px; }
+.deal__side { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; flex: none; position: relative; z-index: 1; }
+.deal__dday {
+  font-size: 11px; font-weight: 800; padding: 2px 8px; border-radius: 999px;
+  background: #ffd36b; color: #5a3a00; letter-spacing: .02em;
+}
+.deal__go { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: rgba(255, 255, 255, .2); }
+.deal__go svg { width: 16px; height: 16px; }
+
+.deal__bottom {
+  position: relative; display: flex; align-items: center; gap: 10px;
+  padding: 12px 16px; background: var(--surface); border: 1px solid #d7e4fa; border-top: 0;
+  border-radius: 0 0 16px 16px;
+}
+.deal__bottom::before { /* 절취선 + 양쪽 반원 홈 */
+  content: ''; position: absolute; left: 14px; right: 14px; top: 0; border-top: 2px dashed #c9dafa;
+}
+.deal__bottom::after {
+  content: ''; position: absolute; top: -9px; left: -9px; right: -9px; height: 18px;
+  background:
+    radial-gradient(circle at 9px 9px, var(--surface) 8px, transparent 8.5px) left / 18px 18px no-repeat,
+    radial-gradient(circle at 9px 9px, var(--surface) 8px, transparent 8.5px) right / 18px 18px no-repeat;
+  pointer-events: none;
+}
+.deal__codebox { display: flex; flex-direction: column; line-height: 1.25; }
+.deal__codebox small { font-size: 11px; color: var(--text-3); }
+.deal__codebox b {
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace; font-size: 17px;
+  letter-spacing: .12em; color: var(--deal-a);
+}
+.deal__until { flex: 1; font-size: 12px; color: var(--text-3); text-align: right; }
+.deal__copy {
+  flex: none; height: 34px; padding: 0 14px; border-radius: 10px; font-size: 13px; font-weight: 700;
+  color: var(--deal-a); background: #eaf1fe;
+}
+.deal__copy:active { background: #d7e4fa; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .chip-btn {
   font-size: 13px; font-weight: 700; padding: 6px 12px; border-radius: 999px;
   background: var(--surface); border: 1px solid var(--line);
