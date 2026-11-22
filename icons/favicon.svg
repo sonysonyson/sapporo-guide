@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1f5fd1"/>
+      <stop offset="1" stop-color="#4a9bff"/>
+    </linearGradient>
+    <!-- 눈꽃 팔 1개: 중심 → 끝 + 가지 한 쌍 + 끝 가지 한 쌍 -->
+    <g id="arm" fill="none" stroke="#fff" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M32 32V10"/>
+      <path d="M32 21.5l-6.5-6.5M32 21.5l6.5-6.5"/>
+      <path d="M32 14l-3.5-3.5M32 14l3.5-3.5"/>
+    </g>
+  </defs>
+  <rect width="64" height="64" rx="14" fill="url(#bg)"/>
+  <use href="#arm"/>
+  <use href="#arm" transform="rotate(60 32 32)"/>
+  <use href="#arm" transform="rotate(120 32 32)"/>
+  <use href="#arm" transform="rotate(180 32 32)"/>
+  <use href="#arm" transform="rotate(240 32 32)"/>
+  <use href="#arm" transform="rotate(300 32 32)"/>
+  <circle cx="32" cy="32" r="3.4" fill="#fff"/>
+</svg>

@@ -128,3 +128,20 @@
 **변경 파일**: `js/app.js`, `js/i18n.js`, `css/style.css`, `.claude/requirements/implementation-spec.md`(§4 신설)
 
 **검증**: KST 경계 시각 6개 케이스를 기기 시간대 Asia/Seoul, America/Los_Angeles 두 곳에서 테스트 → 결과 동일 (11/29 23:59 D-1, 11/30 D-DAY, 12/1 00:00 KST 할인 종료). 브라우저 화면 확인은 아직 안 함
+
+---
+
+## 2026-11-22 · 세션 1 (계속) — 파비콘 (눈꽃송이)
+
+**사용자 요청 (원문)**
+> 홈페이지의 favicon도 추가했으면 한다. 삿포로에 어울리는 눈꽃송이 모양이면 좋겠다.
+
+**수행 내용**
+- 6갈래 눈꽃(팔마다 가지 2쌍 + 중심 원), 흰색 / 파란 그라데이션(#1f5fd1→#4a9bff, 할인 카드와 같은 계열) 둥근 사각 배경
+- `icons/favicon.svg` 원본 + `favicon.ico`(16·32·48, 16px은 끝 가지 생략·선 굵게) + `apple-touch-icon.png`(180, 모서리 없는 사각) + `icon-192/512.png` + `site.webmanifest`
+- `index.html` head에 링크 추가 (ICO → SVG 순, apple-touch-icon, manifest)
+- PIL 없음 → `tools/make_icons.py`로 표준 라이브러리 렌더링 (4x4 슈퍼샘플링)
+
+**변경 파일**: `index.html`, `icons/*` (신규), `tools/make_icons.py` (신규), `.claude/CLAUDE.md`
+
+**검증**: 192px·32px 렌더 결과를 이미지로 확인 (눈꽃 형태 선명). 실제 브라우저 탭 표시는 아직 확인 안 함

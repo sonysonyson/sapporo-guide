@@ -22,6 +22,8 @@
 index.html        화면 골격 (네비, 커버, 섹션 컨테이너, 시트/모달/전체지도)
 css/style.css     모바일 우선 스타일 (최대 폭 480px 앱 프레임)
 js/config.js      기능 플래그 (FEATURES)
+icons/            파비콘 (favicon.svg 원본 / .ico / apple-touch-icon / 192·512 PNG / site.webmanifest)
+tools/make_icons.py  PNG·ICO 재생성 스크립트 (표준 라이브러리만 사용, favicon.svg와 도형 좌표 동일하게 유지)
 js/i18n.js        UI 문자열 사전 + t()
 js/data.js        Mock 데이터 (가이드 상세, POI 좌표, 일차별 코스, 내 일정)
 js/api.js         Mock API (가이드·코스 조회, 로컬 북마크) + track() 이벤트 로그
