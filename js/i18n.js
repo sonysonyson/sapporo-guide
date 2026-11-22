@@ -56,6 +56,7 @@ window.I18N = {
     'fab.copy': '이 가이드 코스로 일정 만들기',
     'sheet.addToPlan': '내 일정에 담기',
     'sheet.tip': 'TIP',
+    'sheet.close': '닫기',
     'modal.selectPlan': '어느 일정에 담을까요?',
     'modal.selectDay': '며칠째에 담을까요?',
     'modal.newPlan': '+ 새 일정 만들기',

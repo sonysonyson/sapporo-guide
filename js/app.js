@@ -1,7 +1,8 @@
 (function () {
   'use strict';
 
-  var GUIDE_ID = new URLSearchParams(location.search).get('guideId') || 'sapporo-001';
+  var FEAT = window.FEATURES || {};
+  var GUIDE_ID =new URLSearchParams(location.search).get('guideId') || 'sapporo-001';
   var $ = function (s, r) { return (r || document).querySelector(s); };
   var $$ = function (s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); };
   var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
@@ -43,7 +44,7 @@
     $('#viewLoading').hidden = view !== 'loading';
     $('#viewError').hidden = view !== 'error';
     $('#viewMain').hidden = view !== 'main';
-    $('#fabWrap').hidden = view !== 'main';
+    $('#fabWrap').hidden = view !== 'main' || !FEAT.itinerary;
     $('#navbar').classList.toggle('is-solid', view !== 'main' || window.scrollY > 10);
   }
 
@@ -70,7 +71,10 @@
     renderCover(); renderTitle(); renderSummary(); renderTabs();
     renderInfo(); renderSpots(); renderCourse(); renderStay(); renderTour(); renderCheck(); renderFood();
     $('#btnFab').textContent = t('fab.copy');
-    updateBadge();
+    $('#btnMyPlans').hidden = !FEAT.itinerary;
+    // FAB가 없으면 하단 여백 축소
+    $('.bottom-spacer').style.height = FEAT.itinerary ? '' : '24px';
+    if (FEAT.itinerary) updateBadge();
   }
 
   /* ============ 4.1 커버 / 타이틀 ============ */
@@ -97,6 +101,8 @@
     $('#regionTag').textContent = g.regionTag;
     $('#guideTitle').textContent = g.title;
     $('#guideTitle').title = g.title;
+    $('#guideMeta').hidden = !FEAT.guideMeta;
+    if (!FEAT.guideMeta) return;
     $('#guideMeta').innerHTML = '<i>' + esc(fmtDate(g.createdAt)) + '</i><i>·</i><i>' +
       esc(t('meta.views', { n: g.viewCount.toLocaleString('ko-KR') })) + '</i><i>·</i><i>' + esc(g.editor.name) + '</i>';
   }
@@ -203,7 +209,7 @@
     $('#poiList').onclick = function (e) {
       var card = e.target.closest('.poi-card'); if (!card) return;
       var poiId = card.dataset.poi;
-      if (e.target.closest('.poi-card__add')) { e.stopPropagation(); startAddPoi(poiId, S.day); return; }
+      if (e.target.closest('.poi-card__add')) { e.stopPropagation(); if (FEAT.itinerary) startAddPoi(poiId, S.day); return; }
       openSheet(poiId, S.day);
     };
     updateCourse();
@@ -231,7 +237,7 @@
         (closed ? '<span class="badge badge--closed">' + t('course.closed') + '</span>' : '') + '</div>' +
         '<div class="poi-card__cat">' + esc(p.category) + (it.memo ? ' · ' + esc(it.memo) : '') + '</div>' +
         '<p class="poi-card__reason">' + esc(p.reason) + '</p></div>' +
-        '<button class="poi-card__add"' + (closed ? ' disabled' : '') + '>' + t('course.add') + '</button></li>';
+        (FEAT.itinerary ? '<button class="poi-card__add"' + (closed ? ' disabled' : '') + '>' + t('course.add') + '</button>' : '') + '</li>';
     }).join('');
     drawMap('mini');
   }
@@ -322,13 +328,15 @@
       (closed ? ' · <span class="badge badge--closed">' + t('course.closed') + '</span>' : '') + '</div>' +
       '<p>' + esc(p.reason) + '</p>' +
       (p.tip ? '<div class="callout"><b>' + t('sheet.tip') + '</b> ' + esc(p.tip) + '</div>' : '') +
-      '<div class="sheet__actions"><button class="btn btn--ghost" data-act="close">' + t('modal.cancel') + '</button>' +
-      '<button class="btn btn--primary" data-act="add"' + (closed ? ' disabled style="opacity:.4"' : '') + '>' + t('sheet.addToPlan') + '</button></div>';
+      (FEAT.itinerary
+        ? '<div class="sheet__actions"><button class="btn btn--ghost" data-act="close">' + t('modal.cancel') + '</button>' +
+          '<button class="btn btn--primary" data-act="add"' + (closed ? ' disabled style="opacity:.4"' : '') + '>' + t('sheet.addToPlan') + '</button></div>'
+        : '<button class="btn btn--ghost btn--block" data-act="close" style="margin-top:16px">' + t('sheet.close') + '</button>');
     $('#sheetOverlay').hidden = false;
     $('#poiSheet').onclick = function (e) {
       var a = e.target.closest('[data-act]'); if (!a) return;
       closeSheet();
-      if (a.dataset.act === 'add') startAddPoi(poiId, dayNum || S.day);
+      if (a.dataset.act === 'add' && FEAT.itinerary) startAddPoi(poiId, dayNum || S.day);
     };
   }
   function closeSheet() { $('#sheetOverlay').hidden = true; }
@@ -569,6 +577,7 @@
     });
   }
   function onFab() {
+    if (!FEAT.itinerary) return;
     track('click_copy_full_course', { guide_id: S.guide.guideId, plan_id: curPlan().planId });
     openCreate({ plan: curPlan() });
   }
@@ -598,7 +607,7 @@
     $('#btnShare').onclick = onShare;
     $('#btnBookmark').onclick = onBookmark;
     $('#btnFab').onclick = onFab;
-    $('#btnMyPlans').onclick = function () { openMyPlans(); };
+    $('#btnMyPlans').onclick = function () { if (FEAT.itinerary) openMyPlans(); };
     $('#btnRetry').onclick = load;
     $('#btnCloseMap').onclick = closeFullMap;
     $('#sheetOverlay').onclick = function (e) { if (e.target === this) closeSheet(); };
