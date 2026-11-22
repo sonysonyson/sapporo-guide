@@ -94,6 +94,7 @@ window.I18N = {
     'export.json': '파일 (.json)',
     'export.icsNeedDate': '캘린더로 내보내려면 출발일을 먼저 정해 주세요',
     'toast.shareCopied': '공유 링크가 복사되었어요',
+    'toast.copyFail': '복사하지 못했어요. 브라우저 권한을 확인해 주세요',
     'toast.bookmarkOn': '가이드를 찜했어요 (이 기기에 저장)',
     'toast.bookmarkOff': '찜을 해제했어요',
     'toast.added': '"{plan}" {day}에 {poi}을(를) 담았어요',

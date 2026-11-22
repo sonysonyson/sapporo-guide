@@ -31,10 +31,75 @@
     clearTimeout(toastTimer);
     toastTimer = setTimeout(function () { el.classList.remove('is-show'); }, 2200);
   }
+  /**
+   * 클립보드 복사 → Promise<boolean>. 절대 reject 하지 않음.
+   * Clipboard API는 보안 컨텍스트(https/localhost)·권한이 필요하고 데스크톱 file:// 등에서 거부될 수 있어
+   * 실패 시 execCommand 방식으로 재시도하고, 그래도 실패하면 안내 토스트를 띄운다.
+   */
   function copyText(text) {
-    if (navigator.clipboard && navigator.clipboard.writeText) return navigator.clipboard.writeText(text);
-    var ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select();
-    try { document.execCommand('copy'); } catch (e) {} ta.remove(); return Promise.resolve();
+    function legacy() {
+      var ta = document.createElement('textarea'), ok = false;
+      ta.value = text; ta.setAttribute('readonly', '');
+      ta.style.cssText = 'position:fixed;top:0;left:-9999px;opacity:0';
+      document.body.appendChild(ta); ta.select(); ta.setSelectionRange(0, text.length);
+      try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+      ta.remove();
+      if (!ok) toast(t('toast.copyFail'));
+      return ok;
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText && window.isSecureContext) {
+      return navigator.clipboard.writeText(text).then(function () { return true; }, legacy);
+    }
+    return Promise.resolve(legacy());
+  }
+  function ifCopied(msgKey) { return function (ok) { if (ok) toast(t(msgKey)); }; }
+
+  /**
+   * 가로 스크롤 영역을 마우스로도 조작 가능하게: 세로 휠 → 가로 스크롤, 마우스 드래그, 양끝 페이드 표시.
+   * (터치 기기는 기본 스와이프 그대로 사용)
+   */
+  function enableHScroll(el) {
+    if (!el || el.dataset.hscroll) return;
+    el.dataset.hscroll = '1';
+    function edges() {
+      var max = el.scrollWidth - el.clientWidth;
+      el.classList.toggle('fade-l', el.scrollLeft > 2);
+      el.classList.toggle('fade-r', max > 2 && el.scrollLeft < max - 2);
+    }
+    el.addEventListener('scroll', edges, { passive: true });
+    window.addEventListener('resize', edges);
+    el.addEventListener('wheel', function (e) {
+      if (Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;
+      var max = el.scrollWidth - el.clientWidth;
+      if (max <= 0) return;
+      // 끝에 닿으면 페이지 세로 스크롤로 넘김
+      if ((e.deltaY < 0 && el.scrollLeft <= 0) || (e.deltaY > 0 && el.scrollLeft >= max - 1)) return;
+      e.preventDefault();
+      el.scrollLeft += e.deltaY;
+    }, { passive: false });
+    var drag = null;
+    el.addEventListener('pointerdown', function (e) {
+      if (e.pointerType !== 'mouse' || e.button !== 0) return;
+      drag = { x: e.clientX, left: el.scrollLeft, moved: false };
+    });
+    window.addEventListener('pointermove', function (e) {
+      if (!drag) return;
+      var dx = e.clientX - drag.x;
+      if (!drag.moved && Math.abs(dx) < 6) return;
+      drag.moved = true; el.classList.add('is-dragging');
+      el.scrollLeft = drag.left - dx;
+    });
+    window.addEventListener('pointerup', function () {
+      if (!drag) return;
+      var moved = drag.moved; drag = null; el.classList.remove('is-dragging');
+      // 드래그 직후의 click(탭/칩 선택)은 무시
+      if (!moved) return;
+      var stop = function (ev) { ev.stopPropagation(); ev.preventDefault(); };
+      el.addEventListener('click', stop, true);
+      // click은 pointerup 직후 동기적으로 발생 → 다음 틱에 해제 (영역 밖에서 놓은 경우 다음 클릭을 삼키지 않도록)
+      setTimeout(function () { el.removeEventListener('click', stop, true); }, 0);
+    });
+    requestAnimationFrame(edges);
   }
   function lsGet(k, d) { try { var v = JSON.parse(localStorage.getItem(k)); return v == null ? d : v; } catch (e) { return d; } }
   function lsSet(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
@@ -136,6 +201,7 @@
       var b = e.target.closest('button'); if (!b) return;
       document.getElementById(b.dataset.target).scrollIntoView({ behavior: 'smooth', block: 'start' });
     };
+    enableHScroll(nav);
   }
   function setActiveTab(id) {
     var nav = $('#anchorTabs');
@@ -187,13 +253,13 @@
     var btn = $('#btnCopyCode');
     if (btn) btn.onclick = function () {
       track('click_flight_deal', { guide_id: S.guide.guideId, action: 'copy_code', expired: expired });
-      copyText(d.code).then(function () { toast(t(expired ? 'deal.copiedExpired' : 'deal.copied')); });
+      copyText(d.code).then(ifCopied(expired ? 'deal.copiedExpired' : 'deal.copied'));
     };
     var link = $('#dealLink');
     // 링크 이동 시 할인코드도 함께 복사 → 결제 화면에서 바로 붙여넣기 (종료 후에는 링크만 이동)
     if (link) link.onclick = function () {
       track('click_flight_deal', { guide_id: S.guide.guideId, action: 'open_link', url: d.url, expired: expired });
-      if (!expired) copyText(d.code).then(function () { toast(t('deal.copiedOnOpen')); }).catch(function () {});
+      if (!expired) copyText(d.code).then(ifCopied('deal.copiedOnOpen'));
     };
   }
 
@@ -208,13 +274,14 @@
         return '<button class="spot" data-poi="' + id + '"><span class="spot__icon">' + p.icon + '</span><span><strong>' +
           esc(sp.cityLabels[id] || p.name) + '</strong><span>' + esc(sp.cityDesc[id] || p.reason) + '</span></span></button>';
       }).join('') + '</div>' +
-      '<h3 class="sub-title">🚌 ' + t('spots.nearby') + '</h3><div class="h-scroll">' +
+      '<h3 class="sub-title">🚌 ' + t('spots.nearby') + '</h3><div class="h-scroll nearby-list" id="nearbyList">' +
       sp.nearby.map(function (n) {
         return '<div class="nearby"><div class="nearby__icon">' + n.icon + '</div><strong>' + esc(n.name) + '</strong><p>' + esc(n.desc) + '</p></div>';
       }).join('') + '</div>';
     $('#sec-spots').onclick = function (e) {
       var b = e.target.closest('[data-poi]'); if (b) openSheet(b.dataset.poi, null);
     };
+    enableHScroll($('#nearbyList'));
   }
 
   /* ============ 4.3 추천 코스 + 지도 ============ */
@@ -230,7 +297,7 @@
       }).join('') + '</div>' +
       '<div class="plan-info" id="planInfo"></div>' +
       '<div class="day-chips" id="dayChips" role="tablist"></div>' +
-      '<div class="mini-map" id="miniMap" role="button" aria-label="' + t('course.mapExpand') + '">' +
+      '<div class="mini-map" id="miniMap" role="button" tabindex="0" aria-label="' + t('course.mapExpand') + '">' +
       '<div class="map-canvas" id="miniMapCanvas"></div><div class="mini-map__shield"></div>' +
       '<span class="mini-map__expand">⤢ ' + t('course.mapExpand') + '</span></div>' +
       '<p class="choice-hint" id="choiceHint" hidden>' + t('course.choiceDay') + '</p>' +
@@ -245,6 +312,8 @@
       S.day = +b.dataset.day; updateCourse();
     };
     $('#miniMap').onclick = openFullMap;
+    $('#miniMap').onkeydown = function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openFullMap(); } };
+    enableHScroll($('#dayChips'));
     $('#poiList').onclick = function (e) {
       var card = e.target.closest('.poi-card'); if (!card) return;
       var poiId = card.dataset.poi;
@@ -520,11 +589,10 @@
   function exportPlan(id, fmt) {
     var it = Itin.get(id), name = Itin.safeName(it.title);
     track('click_export_itinerary', { guide_id: S.guide.guideId, itinerary_id: id, format: fmt });
-    if (fmt === 'text') return copyText(Itin.toText(it, S.pois)).then(function () { toast(t('toast.textCopied')); });
+    if (fmt === 'text') return copyText(Itin.toText(it, S.pois)).then(ifCopied('toast.textCopied'));
     if (fmt === 'share') {
       var text = Itin.toText(it, S.pois);
-      if (navigator.share) return navigator.share({ title: it.title, text: text }).catch(function () {});
-      return copyText(text).then(function () { toast(t('toast.textCopied')); });
+      return shareOrCopy({ title: it.title, text: text }, text, 'toast.textCopied');
     }
     if (fmt === 'ics') {
       var ics = Itin.toICS(it, S.pois);
@@ -598,13 +666,26 @@
     if (history.length > 1 && document.referrer) history.back();
     else toast(t('toast.noHistory'));
   }
+  /**
+   * Web Share API 우선, 미지원(데스크톱 Firefox 등)·실패 시 클립보드 복사로 대체.
+   * 사용자가 공유창을 닫은 경우(AbortError)는 아무것도 하지 않음.
+   */
+  function shareOrCopy(data, copyValue, copiedKey) {
+    var canShare = navigator.share && (!navigator.canShare || navigator.canShare(data));
+    if (!canShare) return copyText(copyValue).then(ifCopied(copiedKey));
+    return navigator.share(data).catch(function (err) {
+      if (err && err.name === 'AbortError') return;
+      return copyText(copyValue).then(ifCopied(copiedKey));
+    });
+  }
   function onShare() {
     var g = S.guide;
-    var webUrl = location.origin + location.pathname + '?guideId=' + encodeURIComponent(g.guideId);
+    // location.origin 은 file:// 에서 "null" 이 되므로 현재 주소 기반으로 생성
+    var u = new URL(location.href); u.search = '?guideId=' + encodeURIComponent(g.guideId); u.hash = '';
+    var webUrl = u.toString();
     var deepLink = 'sapporoguide://guides/' + encodeURIComponent(g.guideId);
     var data = { title: g.title, text: g.title + '\n' + deepLink, url: webUrl };
-    if (navigator.share) navigator.share(data).catch(function () {});
-    else copyText(webUrl).then(function () { toast(t('toast.shareCopied')); });
+    shareOrCopy(data, webUrl, 'toast.shareCopied');
   }
   function onBookmark() {
     var willAdd = !S.guide.bookmarked;

@@ -273,7 +273,8 @@ a { color: var(--primary); }
 }
 .mini-map .leaflet-container, .mini-map > .map-canvas { width: 100%; height: 100%; }
 .mini-map__expand {
-  position: absolute; right: 10px; bottom: 10px; z-index: 500;
+  /* 우하단은 Leaflet 저작권 표기 자리 → 우상단으로 */
+  position: absolute; right: 10px; top: 10px; z-index: 500;
   background: var(--surface); border-radius: 999px; padding: 5px 12px; font-size: 12px; font-weight: 700;
   box-shadow: var(--shadow); pointer-events: none;
 }
@@ -488,6 +489,53 @@ a { color: var(--primary); }
 .toast.is-show { opacity: 1; transform: translate(-50%, 0); }
 
 .leaflet-div-icon { background: none; border: 0; }
+
+/* ---------- 가로 스크롤 영역: 양끝 페이드 (더 있음 표시) ---------- */
+.fade-r { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent); }
+.fade-l { -webkit-mask-image: linear-gradient(to left, #000 calc(100% - 28px), transparent); mask-image: linear-gradient(to left, #000 calc(100% - 28px), transparent); }
+.fade-l.fade-r { -webkit-mask-image: linear-gradient(to right, transparent, #000 28px, #000 calc(100% - 28px), transparent); mask-image: linear-gradient(to right, transparent, #000 28px, #000 calc(100% - 28px), transparent); }
+/* 고정 탭 바는 배경이 비치면 안 되므로 페이드 제외 */
+.anchor-tabs.fade-l, .anchor-tabs.fade-r { -webkit-mask-image: none; mask-image: none; }
+.is-dragging { cursor: grabbing; user-select: none; scroll-snap-type: none !important; }
+.is-dragging * { pointer-events: none; }
+
+/* ---------- 키보드 포커스 ---------- */
+:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.anchor-tabs button:focus-visible { outline-offset: -4px; }
+
+/* ---------- 데스크톱·마우스 환경 (웹) ---------- */
+@media (hover: hover) and (pointer: fine) {
+  /* 근교 여행지: 스와이프 캐러셀 → 잘림 없는 2열 그리드 */
+  .nearby-list {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+    overflow: visible; margin: 0; padding: 0; scroll-snap-type: none;
+  }
+  .nearby-list.fade-l, .nearby-list.fade-r { -webkit-mask-image: none; mask-image: none; }
+  .nearby-list .nearby { flex: none; }
+  .nearby-list .nearby:last-child:nth-child(odd) { grid-column: 1 / -1; }
+
+  /* 앵커 탭: 480px 안에 7개가 모두 들어가도록 */
+  .anchor-tabs { padding: 0 6px; }
+  .anchor-tabs button { padding: 0 10px; }
+  .anchor-tabs, .day-chips { cursor: grab; }
+
+  /* 호버 피드백 */
+  .anchor-tabs button:hover { color: var(--text); }
+  .day-chip:not(.is-active):hover { border-color: #c3ccd8; color: var(--text); }
+  .seg button:not(.is-active):hover { color: var(--text); }
+  .spot { transition: background .15s; }
+  .spot:hover { background: #e8edf4; }
+  .poi-card { transition: border-color .15s, box-shadow .15s; }
+  .poi-card:hover { border-color: #c7d8f5; box-shadow: var(--shadow); }
+  .mini-map:hover .mini-map__expand { background: var(--text); color: #fff; }
+  .navbar.is-solid .icon-btn:hover { background: var(--surface-2); }
+  .navbar:not(.is-solid) .icon-btn:hover { background: rgba(0, 0, 0, .35); }
+  .chip-btn:hover, .deal__copy:hover { filter: brightness(.96); }
+  .deal__top:hover .deal__go { background: rgba(255, 255, 255, .32); }
+  .check-item:hover span { color: var(--text); }
+  .btn:hover, .fab:hover { filter: brightness(1.05); }
+  .plan-opt { cursor: pointer; }
+}
 
 @keyframes fade { from { opacity: 0; } }
 @keyframes up { from { transform: translateY(40px); opacity: .4; } }
