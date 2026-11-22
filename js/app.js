@@ -39,10 +39,17 @@
   function lsGet(k, d) { try { var v = JSON.parse(localStorage.getItem(k)); return v == null ? d : v; } catch (e) { return d; } }
   function lsSet(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
   function fmtDate(iso) { return iso.replace(/-/g, '.'); }
+  /* 한국 시간(KST, UTC+9) 기준 날짜 계산 — 보는 사람의 기기 시간대와 무관 */
+  var KST_OFFSET = 9 * 3600000;
+  function todayKST() { return new Date(Date.now() + KST_OFFSET).toISOString().slice(0, 10); }
+  function daysLeftKST(untilIso) {
+    // until 당일 = 0, 지나면 음수 (KST 자정 기준)
+    return Math.round((Date.parse(untilIso + 'T00:00:00Z') - Date.parse(todayKST() + 'T00:00:00Z')) / 86400000);
+  }
+  function isExpiredKST(untilIso) { return Date.now() > Date.parse(untilIso + 'T23:59:59.999+09:00'); }
   function dday(untilIso) {
-    var today = new Date(); today.setHours(0, 0, 0, 0);
-    var n = Math.round((new Date(untilIso + 'T00:00:00') - today) / 86400000);
-    return n > 0 ? 'D-' + n : 'D-DAY';
+    var n = daysLeftKST(untilIso);
+    return n > 0 ? 'D-' + n : n === 0 ? 'D-DAY' : t('deal.ended');
   }
 
   function show(view) {
@@ -146,12 +153,14 @@
   function checks(arr) { return '<ul class="checks">' + arr.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul>'; }
   function renderInfo() {
     var b = S.guide.basicInfo, d = b.flightDeal;
-    var expired = new Date() > new Date(d.until + 'T23:59:59');
+    // 유효기간(KST)이 지나도 카드·링크·코드는 유지하고 '할인 종료'로 표시
+    var expired = isExpiredKST(d.until);
+    var untilLabel = d.until.slice(5).replace('-', '/');
     $('#sec-info').innerHTML =
       '<h2 class="section__title">' + t('sec.info') + '</h2>' +
       '<h3 class="sub-title">📍 ' + t('info.location') + '</h3>' + checks(b.location) +
-      (expired ? '' :
-        '<div class="deal">' +
+      (
+        '<div class="deal' + (expired ? ' is-expired' : '') + '">' +
         '<a class="deal__top" id="dealLink" href="' + esc(d.url) + '" target="_blank" rel="noopener sponsored">' +
           '<span class="deal__plane" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M2.5 13.5l7-2 4.5-7.5 2 .5-2 7.5 5-1.5c1-.3 2 .4 2 1.4 0 .6-.4 1.1-1 1.3l-15.5 4.3-2-3.5z"/><path d="M4 20h16"/></svg></span>' +
           '<span class="deal__main">' +
@@ -164,8 +173,10 @@
           '<span class="sr-only">' + t('deal.newWindow') + '</span>' +
         '</a>' +
         '<div class="deal__bottom">' +
-          '<span class="deal__codebox"><small>' + t('deal.codeLabel') + '</small><b>' + esc(d.code) + '</b></span>' +
-          '<span class="deal__until">' + t('deal.until', { date: d.until.slice(5).replace('-', '/') }) + '</span>' +
+          '<span class="deal__codebox"><small>' + t('deal.codeLabel') +
+            (expired ? ' <em class="deal__endtag">' + t('deal.ended') + '</em>' : '') + '</small><b>' + esc(d.code) + '</b></span>' +
+          '<span class="deal__until">' + (expired ? t('deal.endedOn', { date: untilLabel }) : t('deal.until', { date: untilLabel })) +
+            '<small>' + t('deal.kst') + '</small></span>' +
           '<button class="deal__copy" id="btnCopyCode">' + t('deal.copy') + '</button>' +
         '</div></div>') +
       '<h3 class="sub-title">🚆 ' + t('info.airport') + '</h3>' + checks(b.airport) +
@@ -175,14 +186,14 @@
       '<h3 class="sub-title">💡 ' + t('info.tip') + '</h3><div class="callout">' + esc(b.tip) + '</div>';
     var btn = $('#btnCopyCode');
     if (btn) btn.onclick = function () {
-      track('click_flight_deal', { guide_id: S.guide.guideId, action: 'copy_code' });
-      copyText(d.code).then(function () { toast(t('deal.copied')); });
+      track('click_flight_deal', { guide_id: S.guide.guideId, action: 'copy_code', expired: expired });
+      copyText(d.code).then(function () { toast(t(expired ? 'deal.copiedExpired' : 'deal.copied')); });
     };
     var link = $('#dealLink');
-    // 링크 이동 시 할인코드도 함께 복사 → 결제 화면에서 바로 붙여넣기
+    // 링크 이동 시 할인코드도 함께 복사 → 결제 화면에서 바로 붙여넣기 (종료 후에는 링크만 이동)
     if (link) link.onclick = function () {
-      track('click_flight_deal', { guide_id: S.guide.guideId, action: 'open_link', url: d.url });
-      copyText(d.code).then(function () { toast(t('deal.copiedOnOpen')); }).catch(function () {});
+      track('click_flight_deal', { guide_id: S.guide.guideId, action: 'open_link', url: d.url, expired: expired });
+      if (!expired) copyText(d.code).then(function () { toast(t('deal.copiedOnOpen')); }).catch(function () {});
     };
   }
 

@@ -211,6 +211,18 @@ a { color: var(--primary); }
   color: var(--deal-a); background: #eaf1fe;
 }
 .deal__copy:active { background: #d7e4fa; }
+.deal__until small { display: block; font-size: 10px; color: var(--text-3); opacity: .8; }
+.deal__endtag {
+  font-style: normal; font-size: 10px; font-weight: 800; margin-left: 4px; padding: 1px 6px;
+  border-radius: 4px; background: #fde8e4; color: var(--accent); vertical-align: 1px;
+}
+/* 할인 종료 상태: 링크는 그대로, 코드 영역만 비활성 톤 */
+.deal.is-expired { box-shadow: 0 6px 16px rgba(20, 35, 60, .12); }
+.deal.is-expired .deal__top { --deal-a: #4d6a96; --deal-b: #7d97bd; }
+.deal.is-expired .deal__dday { background: rgba(255, 255, 255, .92); color: var(--accent); }
+.deal.is-expired .deal__codebox b { color: var(--text-3); text-decoration: line-through; text-decoration-thickness: 2px; }
+.deal.is-expired .deal__until { color: var(--accent); font-weight: 700; }
+.deal.is-expired .deal__copy { color: var(--text-2); background: var(--surface-2); }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .chip-btn {
   font-size: 13px; font-weight: 700; padding: 6px 12px; border-radius: 999px;
