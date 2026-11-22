@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#ffffff">
+  <title>삿포로 여행 가이드</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;800&display=swap">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="app" id="app">
+
+    <!-- 4.1 네비게이션 바 (Sticky / 투명 → 흰색) -->
+    <header class="navbar" id="navbar">
+      <button class="icon-btn" id="btnBack" data-i18n-aria="nav.back">
+        <svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>
+      </button>
+      <div class="navbar__title" id="navTitle"></div>
+      <button class="icon-btn" id="btnBookmark" data-i18n-aria="nav.bookmark" aria-pressed="false">
+        <svg viewBox="0 0 24 24"><path d="M6 4h12v17l-6-4-6 4z"/></svg>
+      </button>
+      <button class="icon-btn" id="btnShare" data-i18n-aria="nav.share">
+        <svg viewBox="0 0 24 24"><path d="M12 3v12M7 8l5-5 5 5M5 13v6h14v-6"/></svg>
+      </button>
+    </header>
+
+    <!-- 로딩 스켈레톤 -->
+    <div id="viewLoading" class="loading">
+      <div class="sk sk-cover"></div>
+      <div class="sk sk-line w60"></div>
+      <div class="sk sk-line w90"></div>
+      <div class="sk sk-card"></div>
+    </div>
+
+    <!-- 6. 에러 화면 -->
+    <div id="viewError" class="error-view" hidden>
+      <div class="error-view__icon">⛄</div>
+      <h2 data-i18n="error.title"></h2>
+      <p data-i18n="error.desc"></p>
+      <button class="btn btn--primary" id="btnRetry" data-i18n="error.retry"></button>
+    </div>
+
+    <!-- 본문 -->
+    <main id="viewMain" hidden>
+      <!-- 4.1 커버 & 타이틀 -->
+      <section class="cover" id="cover"></section>
+      <section class="title-area">
+        <span class="region-tag" id="regionTag"></span>
+        <h1 class="guide-title" id="guideTitle"></h1>
+        <div class="guide-meta" id="guideMeta"></div>
+      </section>
+
+      <!-- 4.2 여행 요약 카드 -->
+      <section class="summary-card" id="summaryCard"></section>
+
+      <!-- 4.2 앵커 탭 -->
+      <nav class="anchor-tabs" id="anchorTabs"></nav>
+
+      <section class="section" id="sec-info"></section>
+      <section class="section" id="sec-spots"></section>
+      <section class="section" id="sec-course"></section>
+      <section class="section" id="sec-stay"></section>
+      <section class="section" id="sec-tour"></section>
+      <section class="section" id="sec-check"></section>
+      <section class="section" id="sec-food"></section>
+      <div class="bottom-spacer"></div>
+    </main>
+
+    <!-- 4.4 하단 플로팅 액션 버튼 -->
+    <div class="fab-wrap" id="fabWrap" hidden>
+      <button class="fab" id="btnFab"></button>
+    </div>
+  </div>
+
+  <!-- 장소 상세 바텀시트 -->
+  <div class="overlay" id="sheetOverlay" hidden>
+    <div class="sheet" role="dialog" aria-modal="true" id="poiSheet"></div>
+  </div>
+
+  <!-- 일정 선택 / 로그인 모달 -->
+  <div class="overlay overlay--center" id="modalOverlay" hidden>
+    <div class="modal" role="dialog" aria-modal="true" id="modal"></div>
+  </div>
+
+  <!-- 전체 화면 지도 -->
+  <div class="fullmap" id="fullMap" hidden>
+    <div class="fullmap__bar">
+      <button class="icon-btn" id="btnCloseMap" aria-label="닫기">
+        <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+      <strong id="fullMapTitle"></strong>
+    </div>
+    <div class="fullmap__map" id="fullMapCanvas"></div>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+  <script src="js/i18n.js"></script>
+  <script src="js/data.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
