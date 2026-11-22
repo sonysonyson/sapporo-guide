@@ -82,3 +82,4 @@
 - POI 데이터에 `gq`(Google 검색용 일본어 장소명) 추가
 - 트래킹: `click_open_google_maps` (type: place/route)
 - 현재 `googleApiKey` 미입력 → 화면 지도는 OSM, Google 링크만 동작
+- (2026-11-22 버그 수정) 지도 컨테이너(`.mini-map`, `.fullmap__map`)는 `isolation: isolate; z-index: 0` 로 쌓임 맥락을 격리해야 함. 지도 라이브러리 내부 z-index(Leaflet 400~1000)가 새어 나와 작은 지도가 전체 화면 지도·바텀시트·모달·토스트 위로 올라오던 문제. 지도 공급자를 바꾸거나 새 지도 영역을 추가할 때도 동일하게 적용할 것

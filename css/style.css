@@ -270,6 +270,9 @@ a { color: var(--primary); }
 .mini-map {
   position: relative; height: 200px; border-radius: 14px; overflow: hidden; background: var(--snow);
   border: 1px solid var(--line); cursor: zoom-in;
+  /* 지도 라이브러리 내부 z-index(Leaflet 400~1000, Google 등)가 페이지 전체로 새지 않도록 쌓임 맥락 격리.
+     없으면 작은 지도가 전체 화면 지도·바텀시트·모달·토스트 위로 올라옴 */
+  isolation: isolate; z-index: 0;
 }
 .mini-map .leaflet-container, .mini-map > .map-canvas { width: 100%; height: 100%; }
 .mini-map__expand {
@@ -464,7 +467,7 @@ a { color: var(--primary); }
 /* ---------- Full map ---------- */
 .fullmap { position: fixed; inset: 0; z-index: 90; background: var(--surface); display: flex; flex-direction: column; }
 .fullmap__bar { height: var(--nav-h); display: flex; align-items: center; gap: 8px; padding: 0 8px; border-bottom: 1px solid var(--line); }
-.fullmap__map { flex: 1; }
+.fullmap__map { flex: 1; position: relative; isolation: isolate; z-index: 0; }
 .fullmap__bar strong { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 /* Google 지도 바로가기 링크 (API 키 불필요) */
