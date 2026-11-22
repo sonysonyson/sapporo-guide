@@ -144,7 +144,9 @@
     var g = S.guide;
     document.title = g.title;
     $('#navTitle').textContent = g.title;
+    $('#btnBookmark').hidden = !FEAT.bookmark;
     $('#btnBookmark').setAttribute('aria-pressed', String(!!g.bookmarked));
+    $('#btnSave').hidden = !FEAT.saveShortcut;
     renderCover(); renderTitle(); renderSummary(); renderTabs();
     renderInfo(); renderSpots(); renderCourse(); renderStay(); renderTour(); renderCheck(); renderFood();
     $('#btnFab').textContent = t('fab.copy');
@@ -686,7 +688,64 @@
     var data = { title: g.title, text: g.title + '\n' + deepLink, url: webUrl };
     shareOrCopy(data, webUrl, 'toast.shareCopied');
   }
+  /* ============ 즐겨찾기 / 홈 화면에 추가 ============
+   * 웹페이지가 브라우저 즐겨찾기를 직접 추가할 수는 없음(보안상 막힘) → 가능한 경우 설치 창, 아니면 기기별 방법 안내
+   *   - Chrome/Edge(안드로이드·PC): beforeinstallprompt 로 '홈 화면에 추가/앱 설치' 창을 바로 띄움 (https 배포 시)
+   *   - iOS Safari / 그 외: 기기에 맞는 단계 안내 + 링크 복사
+   */
+  var installPrompt = null;
+  window.addEventListener('beforeinstallprompt', function (e) { e.preventDefault(); installPrompt = e; });
+  window.addEventListener('appinstalled', function () { installPrompt = null; toast(t('save.installed')); });
+
+  function detectPlatform() {
+    var ua = navigator.userAgent || '';
+    var iOS = /iPhone|iPad|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    if (iOS) return 'ios';
+    if (/Android/.test(ua)) return 'android';
+    return /Mac/.test(navigator.platform || ua) ? 'mac' : 'pc';
+  }
+  function isStandalone() {
+    return (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true;
+  }
+  var SAVE_GUIDES = ['ios', 'android', 'pc', 'mac'];
+
+  function onSaveShortcut() {
+    var platform = detectPlatform();
+    if (isStandalone()) { track('click_save_shortcut', { guide_id: S.guide.guideId, platform: platform, method: 'already' }); return toast(t('save.already')); }
+    if (installPrompt) {
+      track('click_save_shortcut', { guide_id: S.guide.guideId, platform: platform, method: 'install_prompt' });
+      var p = installPrompt; installPrompt = null;
+      p.prompt();
+      return p.userChoice.then(function (r) { if (r && r.outcome === 'accepted') toast(t('save.installed')); }).catch(function () {});
+    }
+    track('click_save_shortcut', { guide_id: S.guide.guideId, platform: platform, method: 'guide' });
+    openSaveGuide(platform);
+  }
+
+  function saveSteps(key) {
+    return '<ol class="save-steps">' + t('save.' + key + '.steps').split('|').map(function (s) { return '<li>' + s + '</li>'; }).join('') + '</ol>';
+  }
+  function openSaveGuide(platform) {
+    var others = SAVE_GUIDES.filter(function (k) { return k !== platform; });
+    openModal(
+      '<h3>' + t('save.title') + '</h3><p>' + t('save.desc') + '</p>' +
+      '<div class="save-card is-main"><strong>' + t('save.' + platform + '.label') + '</strong>' + saveSteps(platform) + '</div>' +
+      '<details class="save-more"><summary>' + t('save.others') + '</summary>' +
+        others.map(function (k) { return '<div class="save-card"><strong>' + t('save.' + k + '.label') + '</strong>' + saveSteps(k) + '</div>'; }).join('') +
+      '</details>' +
+      '<div class="modal__actions"><button class="btn btn--ghost btn--block" data-act="copy">🔗 ' + t('save.copyLink') + '</button>' +
+      '<button class="btn btn--primary btn--block" data-act="close">' + t('save.ok') + '</button></div>',
+      function (act) {
+        if (act === 'copy') {
+          var u = new URL(location.href); u.hash = '';
+          return copyText(u.toString()).then(ifCopied('toast.shareCopied'));
+        }
+        closeModal();
+      });
+  }
+
   function onBookmark() {
+    if (!FEAT.bookmark) return;
     var willAdd = !S.guide.bookmarked;
     track('click_guide_bookmark', { guide_id: S.guide.guideId, action_type: willAdd ? 'add' : 'remove' });
     API.toggleBookmark(S.guide.guideId).then(function (r) {
@@ -725,6 +784,7 @@
     $('#btnBack').onclick = onBack;
     $('#btnShare').onclick = onShare;
     $('#btnBookmark').onclick = onBookmark;
+    $('#btnSave').onclick = function () { if (FEAT.saveShortcut) onSaveShortcut(); };
     $('#btnFab').onclick = onFab;
     $('#btnMyPlans').onclick = function () { if (FEAT.itinerary) openMyPlans(); };
     $('#btnRetry').onclick = load;

@@ -95,3 +95,12 @@
 - 키 파일(`js/config.local.js`)·예시 파일 삭제, Google API 로더·인증 실패 감지·Advanced Marker 코드 제거
 - 화면 지도: OpenStreetMap (번호 핀, 점선 경로, 전체 화면 지도, 핀 클릭 → 장소 시트 그대로)
 - 유지: 전체 화면 지도 "Google 지도로 경로 보기", 장소 시트 "Google 지도에서 보기" (Maps URLs, 키 없음·과금 없음)
+
+## 9. 찜 → 즐겨찾기·홈 화면 추가로 교체 (2026-11-22)
+- 찜(북마크): localStorage에 상태만 저장할 뿐 찜 목록·서버·기기 간 동기화가 없어 실질 기능 없음 → `FEATURES.bookmark=false` 로 숨김 (코드 유지, **가이드 목록 도입 시 재활성화 고려**)
+- 대체: 상단 ☆ 버튼 "즐겨찾기·홈 화면에 추가" (`FEATURES.saveShortcut`)
+  - 이미 홈 화면 앱으로 실행 중이면 안내 토스트
+  - 브라우저가 설치 창을 지원하면(`beforeinstallprompt`, Chrome/Edge, https 배포) 바로 '홈 화면에 추가/설치' 창
+  - 그 외: 기기 자동 판별(iOS / 안드로이드 / Windows / Mac) 단계 안내 모달 + 다른 기기 방법 접기 + 링크 복사
+  - 웹페이지가 브라우저 즐겨찾기를 직접 추가하는 것은 브라우저 보안상 불가 → 안내 방식
+- 트래킹: `click_save_shortcut` (platform, method: install_prompt / guide / already)

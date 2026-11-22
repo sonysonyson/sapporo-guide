@@ -24,8 +24,13 @@
         <svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>
       </button>
       <div class="navbar__title" id="navTitle"></div>
-      <button class="icon-btn" id="btnBookmark" data-i18n-aria="nav.bookmark" aria-pressed="false">
+      <!-- 가이드 찜: FEATURES.bookmark=false 로 숨김 (가이드 목록 도입 시 재사용) -->
+      <button class="icon-btn" id="btnBookmark" data-i18n-aria="nav.bookmark" aria-pressed="false" hidden>
         <svg viewBox="0 0 24 24"><path d="M6 4h12v17l-6-4-6 4z"/></svg>
+      </button>
+      <!-- 즐겨찾기 / 홈 화면에 추가 -->
+      <button class="icon-btn" id="btnSave" data-i18n-aria="nav.save" hidden>
+        <svg viewBox="0 0 24 24"><path d="M12 3.5l2.6 5.3 5.9.9-4.25 4.1 1 5.8L12 16.9l-5.25 2.7 1-5.8L3.5 9.7l5.9-.9z"/></svg>
       </button>
       <button class="icon-btn" id="btnMyPlans" data-i18n-aria="nav.myPlans">
         <svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/></svg>
