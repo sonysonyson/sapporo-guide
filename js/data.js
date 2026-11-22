@@ -211,9 +211,3 @@ window.GUIDE_COURSES = [
     ]
   }
 ];
-
-/* 로그인 사용자의 '내 여행 일정' (Mock) */
-window.MY_ITINERARIES = [
-  { id: 'it-1', title: '12월 삿포로 눈축제 여행', period: '2026.12.18 – 12.21' },
-  { id: 'it-2', title: '가족 홋카이도 여행', period: '2027.01.09 – 01.13' }
-];

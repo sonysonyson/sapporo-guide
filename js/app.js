@@ -6,7 +6,7 @@
   var $$ = function (s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); };
   var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
 
-  var S = { guide: null, plans: [], pois: {}, planIdx: 1, day: 1, pending: null, maps: {} };
+  var S = { guide: null, plans: [], pois: {}, planIdx: 1, day: 1, maps: {} };
 
   var TABS = [
     { id: 'sec-info', key: 'tab.info' },
@@ -70,6 +70,7 @@
     renderCover(); renderTitle(); renderSummary(); renderTabs();
     renderInfo(); renderSpots(); renderCourse(); renderStay(); renderTour(); renderCheck(); renderFood();
     $('#btnFab').textContent = t('fab.copy');
+    updateBadge();
   }
 
   /* ============ 4.1 커버 / 타이틀 ============ */
@@ -332,51 +333,158 @@
   }
   function closeSheet() { $('#sheetOverlay').hidden = true; }
 
-  /* ============ 로그인 체크 / 모달 ============ */
-  function requireLogin(action) {
-    if (API.isLoggedIn()) return action();
-    S.pending = action; // 로그인 후 원래 화면·동작으로 복귀(Redirect)
-    openModal(
-      '<h3>' + t('login.title') + '</h3><p>' + t('login.desc') + '</p>' +
-      '<div class="modal__actions"><button class="btn btn--primary btn--block" data-act="login">' + t('login.cta') + '</button>' +
-      '<button class="btn btn--ghost btn--block" data-act="close">' + t('modal.cancel') + '</button></div>',
-      function (act) {
-        if (act === 'login') API.login().then(function () {
-          closeModal(); toast(t('toast.loggedIn'));
-          var fn = S.pending; S.pending = null; if (fn) setTimeout(fn, 300);
-        });
-        else { S.pending = null; closeModal(); }
-      });
-  }
+  /* ============ 모달 ============ */
   function openModal(html, onAct) {
     $('#modal').innerHTML = html;
     $('#modalOverlay').hidden = false;
-    $('#modal').onclick = function (e) { var a = e.target.closest('[data-act]'); if (a) onAct(a.dataset.act, a); };
+    $('#modal').onclick = function (e) { var a = e.target.closest('[data-act]'); if (a && !a.disabled) onAct(a.dataset.act, a); };
+    var first = $('#modal input'); if (first) setTimeout(function () { first.focus(); }, 50);
   }
   function closeModal() { $('#modalOverlay').hidden = true; }
+  var LOCAL_NOTICE = function () { return '<p class="local-notice">💾 <span>' + t('local.notice') + '</span></p>'; };
 
-  /* ---- 개별 장소 일정 담기 ---- */
+  function updateBadge() {
+    var n = Itin.list().length, b = $('#myPlansBadge');
+    b.hidden = !n; b.textContent = n;
+  }
+
+  /* ---- 새 일정 만들기 (이름 + 출발일) ---- */
+  function openCreate(opts) {
+    // opts: { plan?: 복사할 추천 플랜, poiId?, dayNum? : 만들면서 바로 담을 장소 }
+    var defName = t('create.defaultName') + (opts.plan ? ' ' + opts.plan.label : '');
+    openModal(
+      '<h3>' + t('create.title') + '</h3>' +
+      (opts.plan ? '<p>' + esc(t('create.fromPlan', { plan: opts.plan.label + ' ' + opts.plan.subtitle })) + '</p>' : '<p></p>') +
+      '<label class="field"><span>' + t('create.name') + '</span><input id="fName" maxlength="40" value="' + esc(defName) + '"></label>' +
+      '<label class="field"><span>' + t('create.start') + '</span><input id="fStart" type="date"></label>' +
+      '<p class="hint">' + t('create.startHint') + '</p>' + LOCAL_NOTICE() +
+      '<div class="modal__actions"><button class="btn btn--primary btn--block" data-act="create">' + t('modal.create') + '</button>' +
+      '<button class="btn btn--ghost btn--block" data-act="close">' + t('modal.cancel') + '</button></div>',
+      function (act) {
+        if (act !== 'create') return closeModal();
+        var title = $('#fName').value.trim() || defName, start = $('#fStart').value;
+        var days = opts.plan
+          ? opts.plan.days.map(function (d) {
+              return { day: d.day, items: d.items.filter(function (it) { return S.pois[it.poi].status !== 'closed'; }).map(function (it) { return it.poi; }) };
+            })
+          : [{ day: 1, items: [] }];
+        var it = Itin.create({ title: title, startDate: start, days: days,
+          source: opts.plan ? { guideId: S.guide.guideId, planId: opts.plan.planId, planLabel: opts.plan.label } : null });
+        if (!it) { closeModal(); return toast(t('toast.storageFail')); }
+        closeModal(); updateBadge();
+        if (opts.poiId) return pickDay(it.id, opts.poiId);
+        toast(t('toast.copied', { plan: title }));
+        openMyPlans(it.id);
+      });
+  }
+
+  /* ---- 개별 장소 일정 담기: 일정 선택 → Day 선택 ---- */
   function startAddPoi(poiId, dayNum) {
     track('click_poi_add_schedule', { guide_id: S.guide.guideId, poi_id: poiId, day_num: dayNum });
-    requireLogin(function () {
-      API.getMyItineraries().then(function (list) {
-        openModal(
-          '<h3>' + t('modal.selectPlan') + '</h3><p>' + esc(S.pois[poiId].name) + '</p>' +
-          '<div class="plan-opts">' + list.map(function (it) {
-            return '<button class="plan-opt" data-act="pick" data-id="' + it.id + '" data-title="' + esc(it.title) + '"><strong>' +
-              esc(it.title) + '</strong><span>' + esc(it.period) + '</span></button>';
-          }).join('') +
-          '<button class="plan-opt" data-act="new"><strong>' + t('modal.newPlan') + '</strong></button></div>' +
-          '<button class="btn btn--ghost btn--block" data-act="close">' + t('modal.cancel') + '</button>',
-          function (act, el) {
-            if (act === 'close') return closeModal();
-            var title = act === 'new' ? S.guide.regionTag.split('·').pop().trim() + ' 새 일정' : el.dataset.title;
-            API.addPoi(el.dataset.id || 'new', poiId, dayNum).then(function () {
-              closeModal(); toast(t('toast.added', { plan: title, poi: S.pois[poiId].name }));
-            });
-          });
+    var list = Itin.list();
+    if (!list.length) return openCreate({ poiId: poiId, dayNum: dayNum });
+    openModal(
+      '<h3>' + t('modal.selectPlan') + '</h3><p>' + esc(S.pois[poiId].name) + '</p>' +
+      '<div class="plan-opts">' + list.map(function (it) {
+        return '<button class="plan-opt" data-act="pick" data-id="' + it.id + '"><strong>' + esc(it.title) + '</strong><span>' +
+          esc(it.startDate ? it.startDate.replace(/-/g, '.') : t('my.noStart')) + ' · Day ' + it.days.length + '</span></button>';
+      }).join('') +
+      '<button class="plan-opt" data-act="new"><strong>' + t('modal.newPlan') + '</strong></button></div>' +
+      '<button class="btn btn--ghost btn--block" data-act="close">' + t('modal.cancel') + '</button>',
+      function (act, el) {
+        if (act === 'close') return closeModal();
+        if (act === 'new') return openCreate({ poiId: poiId, dayNum: dayNum });
+        pickDay(el.dataset.id, poiId);
       });
-    });
+  }
+  function pickDay(itId, poiId) {
+    var it = Itin.get(itId);
+    openModal(
+      '<h3>' + t('modal.selectDay') + '</h3><p>' + esc(it.title) + ' · ' + esc(S.pois[poiId].name) + '</p>' +
+      '<div class="day-pick">' + it.days.map(function (d) {
+        return '<button class="day-chip" data-act="day" data-day="' + d.day + '">' + esc(Itin.dayLabel(it, d.day)) + '</button>';
+      }).join('') +
+      '<button class="day-chip" data-act="newday">' + t('modal.newDay') + '</button></div>' +
+      '<button class="btn btn--ghost btn--block" data-act="close">' + t('modal.cancel') + '</button>',
+      function (act, el) {
+        if (act === 'close') return closeModal();
+        var day = act === 'newday' ? it.days.length ? it.days[it.days.length - 1].day + 1 : 1 : +el.dataset.day;
+        var r = Itin.addPoi(itId, day, poiId);
+        closeModal(); updateBadge();
+        toast(r ? t('toast.added', { plan: it.title, day: 'Day ' + day, poi: S.pois[poiId].name }) : t('toast.storageFail'));
+      });
+  }
+
+  /* ---- 내 일정 시트: 확인·편집·내보내기 ---- */
+  function openMyPlans(openId) {
+    var list = Itin.list();
+    $('#poiSheet').innerHTML =
+      '<div class="sheet__grab"></div><div class="sheet__head"><h3>' + t('my.title') + '</h3>' +
+      '<button class="icon-btn" data-act="close" aria-label="' + t('modal.cancel') + '"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>' +
+      LOCAL_NOTICE() +
+      (list.length ? list.map(function (it) { return planCard(it, it.id === openId || list.length === 1); }).join('')
+        : '<div class="my-empty">' + t('my.empty') + '</div>') +
+      '<button class="btn btn--primary btn--block" data-act="new" style="margin-top:6px">' + t('modal.newPlan') + '</button>';
+    $('#sheetOverlay').hidden = false;
+    $('#poiSheet').onclick = onMyPlansClick;
+    $('#poiSheet').onchange = function (e) {
+      if (e.target.dataset.start === undefined) return;
+      Itin.update(e.target.dataset.start, { startDate: e.target.value });
+      openMyPlans(e.target.dataset.start);
+    };
+  }
+  function planCard(it, open) {
+    var count = it.days.reduce(function (n, d) { return n + d.items.length; }, 0);
+    return '<details class="my-plan"' + (open ? ' open' : '') + '><summary><div class="my-plan__title"><strong>' + esc(it.title) + '</strong><span>' +
+      esc(it.startDate ? it.startDate.replace(/-/g, '.') : t('my.noStart')) + ' · Day ' + it.days.length + ' · ' + t('my.items', { n: count }) +
+      '</span></div></summary><div class="my-plan__body">' +
+      '<label class="my-plan__date">📅 ' + t('create.start') + ' <input type="date" data-start="' + it.id + '" value="' + esc(it.startDate) + '"></label>' +
+      it.days.map(function (d) {
+        return '<div class="my-day"><h5>' + esc(Itin.dayLabel(it, d.day)) + '</h5><ol>' +
+          (d.items.length ? d.items.map(function (pid, i) {
+            var p = S.pois[pid] || { name: pid, category: '' };
+            return '<li><b>' + (i + 1) + '</b><span>' + esc(p.name) + ' <em>' + esc(p.category) + '</em></span>' +
+              '<button class="link-btn" data-act="rm" data-id="' + it.id + '" data-day="' + d.day + '" data-idx="' + i + '">' + t('my.removeItem') + '</button></li>';
+          }).join('') : '<li><em>' + t('my.emptyDay') + '</em></li>') + '</ol></div>';
+      }).join('') +
+      '<div class="export-row">' +
+      '<button class="chip-btn" data-act="exp" data-fmt="text" data-id="' + it.id + '">📋 ' + t('export.text') + '</button>' +
+      '<button class="chip-btn" data-act="exp" data-fmt="share" data-id="' + it.id + '">📤 ' + t('export.share') + '</button>' +
+      '<button class="chip-btn" data-act="exp" data-fmt="ics" data-id="' + it.id + '"' + (it.startDate ? '' : ' disabled title="' + esc(t('export.icsNeedDate')) + '"') + '>📅 ' + t('export.ics') + '</button>' +
+      '<button class="chip-btn" data-act="exp" data-fmt="json" data-id="' + it.id + '">💾 ' + t('export.json') + '</button></div>' +
+      '<div class="my-plan__foot"><button class="link-btn" data-act="addday" data-id="' + it.id + '">' + t('modal.newDay') + '</button>' +
+      '<button class="link-btn link-btn--danger" data-act="del" data-id="' + it.id + '">' + t('my.remove') + '</button></div>' +
+      '</div></details>';
+  }
+  function onMyPlansClick(e) {
+    var a = e.target.closest('[data-act]'); if (!a || a.disabled) return;
+    var id = a.dataset.id, act = a.dataset.act;
+    if (act === 'close') return closeSheet();
+    if (act === 'new') { closeSheet(); return openCreate({}); }
+    if (act === 'rm') { Itin.removePoi(id, +a.dataset.day, +a.dataset.idx); return openMyPlans(id); }
+    if (act === 'addday') { Itin.addDay(id); return openMyPlans(id); }
+    if (act === 'del') {
+      var it = Itin.get(id);
+      if (!confirm(t('my.deleteConfirm', { plan: it.title }))) return;
+      Itin.remove(id); updateBadge(); toast(t('toast.deleted')); return openMyPlans();
+    }
+    if (act === 'exp') exportPlan(id, a.dataset.fmt);
+  }
+  function exportPlan(id, fmt) {
+    var it = Itin.get(id), name = Itin.safeName(it.title);
+    track('click_export_itinerary', { guide_id: S.guide.guideId, itinerary_id: id, format: fmt });
+    if (fmt === 'text') return copyText(Itin.toText(it, S.pois)).then(function () { toast(t('toast.textCopied')); });
+    if (fmt === 'share') {
+      var text = Itin.toText(it, S.pois);
+      if (navigator.share) return navigator.share({ title: it.title, text: text }).catch(function () {});
+      return copyText(text).then(function () { toast(t('toast.textCopied')); });
+    }
+    if (fmt === 'ics') {
+      var ics = Itin.toICS(it, S.pois);
+      if (!ics) return toast(t('export.icsNeedDate'));
+      Itin.download(name + '.ics', 'text/calendar', ics); return toast(t('toast.downloaded'));
+    }
+    if (fmt === 'json') { Itin.download(name + '.json', 'application/json', Itin.toJSON(it, S.pois)); toast(t('toast.downloaded')); }
   }
 
   /* ============ 4.0.4 숙소 / 4.0.5 투어 ============ */
@@ -454,22 +562,15 @@
   function onBookmark() {
     var willAdd = !S.guide.bookmarked;
     track('click_guide_bookmark', { guide_id: S.guide.guideId, action_type: willAdd ? 'add' : 'remove' });
-    requireLogin(function () {
-      API.toggleBookmark(S.guide.guideId).then(function (r) {
-        S.guide.bookmarked = r.bookmarked;
-        $('#btnBookmark').setAttribute('aria-pressed', String(r.bookmarked));
-        toast(t(r.bookmarked ? 'toast.bookmarkOn' : 'toast.bookmarkOff'));
-      });
+    API.toggleBookmark(S.guide.guideId).then(function (r) {
+      S.guide.bookmarked = r.bookmarked;
+      $('#btnBookmark').setAttribute('aria-pressed', String(r.bookmarked));
+      toast(t(r.bookmarked ? 'toast.bookmarkOn' : 'toast.bookmarkOff'));
     });
   }
   function onFab() {
-    track('click_copy_full_course', { guide_id: S.guide.guideId });
-    requireLogin(function () {
-      var plan = curPlan();
-      API.copyItinerary(S.guide.guideId, plan.planId).then(function () {
-        toast(t('toast.copied', { plan: plan.label + ' ' + plan.subtitle }));
-      });
-    });
+    track('click_copy_full_course', { guide_id: S.guide.guideId, plan_id: curPlan().planId });
+    openCreate({ plan: curPlan() });
   }
 
   /* ============ 스크롤: 네비 배경 전환 + 탭 스크롤스파이 ============ */
@@ -497,10 +598,13 @@
     $('#btnShare').onclick = onShare;
     $('#btnBookmark').onclick = onBookmark;
     $('#btnFab').onclick = onFab;
+    $('#btnMyPlans').onclick = function () { openMyPlans(); };
     $('#btnRetry').onclick = load;
     $('#btnCloseMap').onclick = closeFullMap;
     $('#sheetOverlay').onclick = function (e) { if (e.target === this) closeSheet(); };
-    $('#modalOverlay').onclick = function (e) { if (e.target === this) { S.pending = null; closeModal(); } };
+    $('#modalOverlay').onclick = function (e) { if (e.target === this) closeModal(); };
+    // 다른 탭에서 일정이 바뀌면 배지 동기화
+    window.addEventListener('storage', function (e) { if (e.key && e.key.indexOf('sg.itineraries') === 0) updateBadge(); });
     document.addEventListener('keydown', function (e) {
       if (e.key === 'Escape') { closeSheet(); closeModal(); closeFullMap(); }
       if (e.key === 'Enter' && e.target.classList && e.target.classList.contains('poi-card')) openSheet(e.target.dataset.poi, S.day);

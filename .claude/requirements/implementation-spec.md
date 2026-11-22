@@ -20,11 +20,13 @@
 | 4.2 앵커 탭 | 7개 탭(기본 정보/명소/추천 코스/숙소/투어/준비물/맛집), Sticky, 부드러운 스크롤 + 스크롤스파이 | `renderTabs`, `setActiveTab` |
 | 4.3 일차 필터 | Day 가로 스크롤 칩 → 리스트·지도 갱신 | `updateCourse` |
 | 4.3 미니 지도 | Leaflet + OSM 타일, 번호 핀 + 점선 Polyline, 클릭 시 전체 화면 지도(인터랙션 가능, 핀 탭 → 바텀시트). Leaflet 로드 실패 시 SVG 간략 경로 | `drawMap`, `drawFallback` |
-| 4.3 장소 카드 | 순서 번호·장소명·카테고리·추천 사유(2줄)·썸네일(아이콘) / 카드 → 바텀시트, `+ 일정담기` → 일정 선택 모달 | `openSheet`, `startAddPoi` |
-| 4.4 FAB | "이 가이드 코스로 일정 만들기" → 로그인 체크 → 현재 선택된 플랜을 내 일정으로 복사 | `onFab` |
-| 5 API | `js/api.js` Mock 함수로 대응 (getGuide / getCourses / toggleBookmark / copyItinerary) | `api.js` |
-| 6 예외 처리 | 로딩 스켈레톤, 에러+재시도, 운영 종료 장소 Dimmed+뱃지+담기 비활성화, 비로그인 시 로그인 팝업 후 원래 동작 이어서 실행 | `show`, `requireLogin` |
-| 7 트래킹 | `view_guide_detail`, `click_guide_bookmark`, `click_poi_add_schedule`, `click_copy_full_course` → console + `window.dataLayer` | `track` |
+| 4.3 장소 카드 | 순서 번호·장소명·카테고리·추천 사유(2줄)·썸네일(아이콘) / 카드 → 바텀시트, `+ 일정담기` → 내 일정 선택 → Day 선택 (일정이 없으면 새 일정 만들기부터) | `openSheet`, `startAddPoi`, `pickDay` |
+| 4.4 FAB | "이 가이드 코스로 일정 만들기" → 이름·출발일(선택) 입력 → 현재 선택된 플랜을 로컬 '내 일정'으로 복사 (운영 종료 장소 제외) → 내 일정 시트 열림 | `onFab`, `openCreate` |
+| 내 일정 (신규) | 네비 달력 아이콘(개수 배지) → 바텀시트: 일정별 Day 목록, 출발일 수정, 장소 빼기, Day 추가, 삭제, **내보내기** | `openMyPlans`, `itinerary.js` |
+| 내보내기 (신규) | 텍스트 복사 / 공유(Web Share, 미지원 시 복사) / 캘린더 .ics(출발일 필요, Day별 종일 일정) / .json 파일 | `exportPlan`, `Itin.toText/toICS/toJSON` |
+| 5 API | 가이드·코스 조회는 Mock API. 북마크·일정 생성/복사는 서버 API 대신 localStorage 사용 (`POST /users/bookmarks`, `POST /itineraries/copy` 미사용) | `api.js`, `itinerary.js` |
+| 6 예외 처리 | 로딩 스켈레톤, 에러+재시도, 운영 종료 장소 Dimmed+뱃지+담기 비활성화, localStorage 사용 불가 시 안내 토스트 | `show`, `toast.storageFail` |
+| 7 트래킹 | `view_guide_detail`, `click_guide_bookmark`, `click_poi_add_schedule`, `click_copy_full_course`(+plan_id), **`click_export_itinerary`**(format) → console + `window.dataLayer` | `track` |
 | 8 다국어 | UI 문자열 `js/i18n.js` 분리 | `i18n.js` |
 
 ## 2. 해석·결정 사항
@@ -35,8 +37,10 @@
 - **오타 정정**: 요청서 "노조리베츠" → "노보리베츠". 항공권 "4/50만원대" → "40~50만원대".
 - **표 → 카드**: 숙소·투어·맛집 표는 모바일 폭에서 가독성을 위해 카드형으로 변환.
 - **썸네일**: 실제 이미지가 없어 카테고리 이모지 아이콘으로 대체 (이미지 URL 주어지면 `coverImage`/POI에 필드 추가).
-- **북마크 버튼**: 5·7장에 북마크 API/로그가 있어 네비게이션 바에 추가.
-- **로그인**: 실제 인증이 없어 데모 로그인 모달로 대체 (localStorage `sg.loggedIn`).
+- **북마크 버튼**: 5·7장에 북마크 API/로그가 있어 네비게이션 바에 추가. 로컬 저장.
+- **로그인 제거 (2026-11-22, 사용자 요청)**: 요청서 4.4·6장의 로그인 체크/리다이렉트 정책은 적용하지 않음. 링크로 접근한 모든 사람이 로그인 없이 사용하고, 일정은 접속한 브라우저 기준으로 저장·내보내기.
+  - 한계: 기기·브라우저 간 동기화 없음, 브라우저 데이터 삭제 시 사라짐 → 화면에 안내 문구 노출, 내보내기로 보관.
+- **코스 복사 시 택1 항목**: 대안 장소까지 모두 복사되고, 사용자가 '내 일정'에서 빼기로 정리.
 - **작성일·조회수·POI 좌표**: Mock 값. 좌표는 대략적 위치.
 
 ## 3. 미결 / 추후 확인
@@ -44,3 +48,5 @@
 - "삿포로 여행 정보 목록", "버스투어 정리본", "겨울 준비물" 등 참조 문서 링크
 - 실제 커버/장소 이미지
 - EN 번역 (`I18N.en` 추가)
+- (선택) 내보낸 .json을 다시 불러오는 '가져오기' 기능
+- (선택) 코스 복사 시 택1 항목을 고르게 할지 여부

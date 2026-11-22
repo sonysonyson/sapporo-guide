@@ -342,6 +342,58 @@ a { color: var(--primary); }
 .modal__day { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
 .modal__actions { display: grid; gap: 8px; }
 
+/* ---------- 내 일정 (로컬 저장) ---------- */
+.icon-btn { position: relative; }
+.nav-badge {
+  position: absolute; top: 3px; right: 2px; min-width: 16px; height: 16px; padding: 0 4px;
+  border-radius: 999px; background: var(--accent); color: #fff; font-size: 10px; font-weight: 800;
+  line-height: 16px; text-align: center;
+}
+.field { display: block; margin: 0 0 12px; }
+.field span { display: block; font-size: 13px; font-weight: 700; color: var(--text-2); margin-bottom: 4px; }
+.field input {
+  width: 100%; height: 44px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--line);
+  font: inherit; color: var(--text); background: var(--surface);
+}
+.field input:focus { outline: 2px solid var(--primary-weak); border-color: var(--primary); }
+.hint { font-size: 12px; color: var(--text-3); margin: -6px 0 14px; }
+.local-notice {
+  font-size: 12px; color: var(--text-2); background: var(--surface-2); border-radius: 10px;
+  padding: 8px 10px; margin: 0 0 14px; display: flex; gap: 6px;
+}
+.day-pick { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0; }
+.day-pick .day-chip { padding: 8px 14px; }
+
+.sheet__head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.sheet__head h3 { margin: 0; }
+.my-empty { text-align: center; color: var(--text-3); padding: 28px 10px; font-size: 14px; }
+.my-plan { border: 1px solid var(--line); border-radius: 14px; margin-bottom: 10px; overflow: hidden; }
+.my-plan > summary {
+  list-style: none; cursor: pointer; padding: 14px; display: flex; align-items: center; gap: 10px;
+}
+.my-plan > summary::-webkit-details-marker { display: none; }
+.my-plan > summary::after { content: '⌄'; color: var(--text-3); font-size: 18px; line-height: 1; transition: transform .2s; }
+.my-plan[open] > summary::after { transform: rotate(180deg); }
+.my-plan__title { flex: 1; min-width: 0; }
+.my-plan__title strong { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.my-plan__title span { font-size: 12px; color: var(--text-3); }
+.my-plan__body { padding: 0 14px 14px; border-top: 1px solid var(--line); }
+.my-plan__date { display: flex; align-items: center; gap: 8px; margin: 12px 0 4px; font-size: 13px; color: var(--text-2); }
+.my-plan__date input { height: 34px; padding: 0 8px; border: 1px solid var(--line); border-radius: 8px; font: inherit; font-size: 13px; }
+.my-day { margin-top: 12px; }
+.my-day h5 { margin: 0 0 4px; font-size: 13px; color: var(--primary); }
+.my-day ol { margin: 0; padding: 0; list-style: none; }
+.my-day li { display: flex; align-items: center; gap: 8px; padding: 6px 0; font-size: 14px; border-bottom: 1px dashed var(--line); }
+.my-day li b { width: 20px; color: var(--text-3); font-size: 12px; }
+.my-day li span { flex: 1; min-width: 0; }
+.my-day li em { font-style: normal; color: var(--text-3); font-size: 12px; }
+.link-btn { font-size: 12px; color: var(--text-3); text-decoration: underline; padding: 2px 4px; }
+.link-btn--danger { color: var(--accent); }
+.export-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 14px; }
+.export-row .chip-btn { height: 38px; border-radius: 10px; font-size: 13px; }
+.export-row .chip-btn:disabled { opacity: .45; cursor: not-allowed; }
+.my-plan__foot { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; }
+
 /* ---------- Full map ---------- */
 .fullmap { position: fixed; inset: 0; z-index: 90; background: var(--surface); display: flex; flex-direction: column; }
 .fullmap__bar { height: var(--nav-h); display: flex; align-items: center; gap: 8px; padding: 0 8px; border-bottom: 1px solid var(--line); }
