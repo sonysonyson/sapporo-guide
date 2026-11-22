@@ -71,3 +71,14 @@
 - 공유: Web Share 지원 시 공유창, 미지원·오류 시 링크 복사 (사용자가 닫은 경우는 무시). 공유 URL은 `location.href` 기반 (file:// 대응)
 - 미니 지도: '지도 크게 보기'를 우상단으로 이동(저작권 표기 가림 해소), 키보드(Tab → Enter/Space)로 열기 가능
 - 호버·포커스(`:focus-visible`) 스타일 추가
+
+## 6. 지도: Google Maps 전환 (2026-11-22)
+- 사유(사용자): 사용자들이 Google 지도에 익숙하고, 기존 지도는 확대 시 위치 가늠이 어려움
+- `js/map.js` MapKit: 공급자 Google Maps JavaScript API(Advanced Marker + Polyline) → 실패 시 Leaflet/OSM → SVG
+- 유지 기능: 번호 핀(택1 회색·운영 종료 연회색), 같은 좌표 라벨 병합, 점선 경로(택1 제외, 선택형 날은 없음), fitBounds(최대 줌 15), 미니 지도 조작 불가 + 클릭 시 전체 화면, 전체 지도 핀 클릭 → 장소 시트, 핀 툴팁(장소명)
+- 미니 지도: gestureHandling none, UI 숨김 / 전체 지도: greedy 제스처, 줌·스트리트뷰 컨트롤
+- 지도 라벨: language=ko, region=KR
+- 추가: 장소 시트 "Google 지도에서 보기", 전체 지도 상단 "Google 지도로 경로 보기"(해당 Day 경로, 택1 날은 숨김) — Maps URLs, 키 불필요
+- POI 데이터에 `gq`(Google 검색용 일본어 장소명) 추가
+- 트래킹: `click_open_google_maps` (type: place/route)
+- 현재 `googleApiKey` 미입력 → 화면 지도는 OSM, Google 링크만 동작

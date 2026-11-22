@@ -364,64 +364,43 @@
     return pts.filter(function (p) { return !p.alt; }).map(function (p) { return [p.lat, p.lng]; });
   }
 
+  /**
+   * 지도 그리기 — 공급자(Google / OpenStreetMap / SVG)는 js/map.js 의 MapKit 이 결정.
+   * 번호 핀·점선 경로·경계 맞춤·핀 클릭(전체 지도) 동작은 공급자와 무관하게 동일.
+   */
   function drawMap(kind) {
     var canvasId = kind === 'mini' ? 'miniMapCanvas' : 'fullMapCanvas';
-    var el = document.getElementById(canvasId), pts = dayPoints();
-    if (!window.L) return drawFallback(el, pts);
-
-    var m = S.maps[kind];
-    if (!m || m._container !== el) {
-      var interactive = kind === 'full';
-      m = L.map(el, {
-        zoomControl: interactive, dragging: interactive, scrollWheelZoom: interactive, doubleClickZoom: interactive,
-        touchZoom: interactive, boxZoom: interactive, keyboard: interactive, attributionControl: true
-      });
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 18, attribution: '&copy; OpenStreetMap'
-      }).on('tileerror', function () { el.dataset.tileError = '1'; }).addTo(m);
-      m._layer = L.layerGroup().addTo(m);
-      S.maps[kind] = m;
-    }
-    m._layer.clearLayers();
-    var route = routeOf(pts);
-    if (route.length > 1) L.polyline(route, { color: '#2a6fdb', weight: 3, opacity: .85, dashArray: '6 6' }).addTo(m._layer);
-    var seen = {};
-    pts.forEach(function (p) {
-      var key = p.lat + ',' + p.lng;
-      var label = seen[key] ? seen[key] + '·' + p.no : String(p.no);
-      seen[key] = label;
-      var icon = L.divIcon({ className: '', iconSize: [26, 26], iconAnchor: [13, 26],
-        html: '<div class="pin' + (p.alt ? ' is-alt' : '') + (p.closed ? ' is-closed' : '') + '"><span>' + label + '</span></div>' });
-      var mk = L.marker([p.lat, p.lng], { icon: icon, zIndexOffset: p.no });
-      if (kind === 'full') mk.bindTooltip(p.name, { direction: 'top', offset: [0, -24] }).on('click', function () { openSheet(p.id, S.day); });
-      mk.addTo(m._layer);
+    var pts = dayPoints(), route = routeOf(pts);
+    return MapKit.ready().then(function () {
+      var el = document.getElementById(canvasId);
+      if (!el) return;
+      var v = S.maps[kind];
+      if (!v || v.el !== el || el.dataset.provider !== MapKit.provider()) {
+        v = S.maps[kind] = MapKit.create(el, { interactive: kind === 'full' });
+      }
+      v.render({ points: pts, route: route, onPinClick: kind === 'full' ? function (id) { openSheet(id, S.day); } : null });
     });
-    m.invalidateSize();
-    var bounds = L.latLngBounds(pts.map(function (p) { return [p.lat, p.lng]; }));
-    if (bounds.getNorthEast().equals(bounds.getSouthWest())) m.setView(bounds.getCenter(), 14);
-    else m.fitBounds(bounds, { padding: kind === 'mini' ? [28, 28] : [56, 56], maxZoom: 15 });
   }
+  // Google 인증 실패 등으로 공급자가 바뀌면 열린 지도를 다시 그림
+  MapKit.onFallback(function () {
+    S.maps = {};
+    if (!$('#viewMain').hidden) drawMap('mini');
+    if (!$('#fullMap').hidden) drawMap('full');
+  });
 
-  // Leaflet 로드 실패 시: 좌표를 SVG에 투영한 간략 경로
-  function drawFallback(el, pts) {
-    var lats = pts.map(function (p) { return p.lat; }), lngs = pts.map(function (p) { return p.lng; });
-    var minLa = Math.min.apply(0, lats), maxLa = Math.max.apply(0, lats), minLn = Math.min.apply(0, lngs), maxLn = Math.max.apply(0, lngs);
-    var W = 320, H = 180, pad = 24;
-    var sx = function (v) { return maxLn === minLn ? W / 2 : pad + (v - minLn) / (maxLn - minLn) * (W - pad * 2); };
-    var sy = function (v) { return maxLa === minLa ? H / 2 : H - pad - (v - minLa) / (maxLa - minLa) * (H - pad * 2); };
-    var route = routeOf(pts).map(function (c) { return sx(c[1]) + ',' + sy(c[0]); }).join(' ');
-    el.innerHTML = '<svg viewBox="0 0 ' + W + ' ' + H + '" width="100%" height="100%">' +
-      '<polyline points="' + route + '" fill="none" stroke="#2a6fdb" stroke-width="2" stroke-dasharray="5 5"/>' +
-      pts.map(function (p) {
-        return '<g transform="translate(' + sx(p.lng) + ',' + sy(p.lat) + ')"><circle r="10" fill="' + (p.alt ? '#8b95a3' : '#2a6fdb') + '" stroke="#fff" stroke-width="2"/>' +
-          '<text text-anchor="middle" dy="4" font-size="10" font-weight="800" fill="#fff">' + p.no + '</text></g>';
-      }).join('') +
-      '<text x="8" y="' + (H - 8) + '" font-size="9" fill="#8b95a3">' + esc(t('map.fallback')) + '</text></svg>';
+  // Google 지도 앱/웹에서 이 날의 경로 열기 (API 키 불필요)
+  function dayRouteUrl() {
+    var pts = dayPoints();
+    if (curDay().choice) return null; // 택1 일정은 경로가 없음
+    return MapKit.routeUrl(pts.filter(function (p) { return !p.alt; }).map(function (p) { return S.pois[p.id]; }));
   }
 
   function openFullMap() {
     $('#fullMap').hidden = false;
     $('#fullMapTitle').textContent = curPlan().label + ' · ' + t('course.day', { n: S.day });
+    var url = dayRouteUrl(), a = $('#btnGmapsRoute');
+    a.hidden = !url;
+    if (url) a.href = url;
     document.body.style.overflow = 'hidden';
     requestAnimationFrame(function () { drawMap('full'); });
   }
@@ -436,11 +415,15 @@
       (closed ? ' · <span class="badge badge--closed">' + t('course.closed') + '</span>' : '') + '</div>' +
       '<p>' + esc(p.reason) + '</p>' +
       (p.tip ? '<div class="callout"><b>' + t('sheet.tip') + '</b> ' + esc(p.tip) + '</div>' : '') +
+      '<a class="gmaps-link" id="sheetGmaps" href="' + esc(MapKit.placeUrl(p)) + '" target="_blank" rel="noopener">' +
+        '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-6.5-5.6-6.5-11A6.5 6.5 0 0 1 18.5 10c0 5.4-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.4"/></svg>' +
+        t('map.openPlace') + '<span class="sr-only">' + t('deal.newWindow') + '</span></a>' +
       (FEAT.itinerary
         ? '<div class="sheet__actions"><button class="btn btn--ghost" data-act="close">' + t('modal.cancel') + '</button>' +
           '<button class="btn btn--primary" data-act="add"' + (closed ? ' disabled style="opacity:.4"' : '') + '>' + t('sheet.addToPlan') + '</button></div>'
         : '<button class="btn btn--ghost btn--block" data-act="close" style="margin-top:16px">' + t('sheet.close') + '</button>');
     $('#sheetOverlay').hidden = false;
+    $('#sheetGmaps').onclick = function () { track('click_open_google_maps', { guide_id: S.guide.guideId, type: 'place', poi_id: poiId }); };
     $('#poiSheet').onclick = function (e) {
       var a = e.target.closest('[data-act]'); if (!a) return;
       closeSheet();
@@ -739,7 +722,8 @@
       if (e.key === 'Enter' && e.target.classList && e.target.classList.contains('poi-card')) openSheet(e.target.dataset.poi, S.day);
     });
     window.addEventListener('scroll', onScroll, { passive: true });
-    window.addEventListener('resize', function () { if (S.maps.mini) S.maps.mini.invalidateSize(); });
+    window.addEventListener('resize', function () { if (S.maps.mini) S.maps.mini.resize(); });
+    $('#btnGmapsRoute').onclick = function () { track('click_open_google_maps', { guide_id: S.guide.guideId, type: 'route', day_num: S.day }); };
   }
 
   applyStaticI18n();

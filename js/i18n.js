@@ -107,7 +107,9 @@ window.I18N = {
     'error.title': '정보를 불러오지 못했어요',
     'error.desc': '네트워크 상태를 확인한 뒤 다시 시도해 주세요.',
     'error.retry': '다시 시도',
-    'map.fallback': '지도를 불러오지 못해 간략 경로로 표시합니다'
+    'map.fallback': '지도를 불러오지 못해 간략 경로로 표시합니다',
+    'map.openPlace': 'Google 지도에서 보기',
+    'map.openRoute': 'Google 지도로 경로 보기'
   }
 };
 
