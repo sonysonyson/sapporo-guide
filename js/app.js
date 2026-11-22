@@ -368,7 +368,29 @@
    * 지도 그리기 — 공급자(Google / OpenStreetMap / SVG)는 js/map.js 의 MapKit 이 결정.
    * 번호 핀·점선 경로·경계 맞춤·핀 클릭(전체 지도) 동작은 공급자와 무관하게 동일.
    */
+  /*
+   * 지연 생성: 작은 지도는 추천 일정 영역 근처까지 스크롤했을 때 처음 생성한다
+   * (지도 타일 요청을 줄여 첫 화면 로딩을 가볍게 하고, OSM 타일 서버 부담도 줄임).
+   * 생성 후에는 같은 지도 객체를 재사용 (일차·플랜 변경 시 핀·경로만 다시 그림)
+   */
+  function whenMiniVisible(cb) {
+    var box = document.getElementById('miniMap');
+    if (!box) return;
+    if (!('IntersectionObserver' in window)) { box.dataset.seen = '1'; return cb(); }
+    if (box._io) return; // 이미 관찰 중 → 보이면 그때 최신 일차로 그림
+    box._io = new IntersectionObserver(function (entries) {
+      if (!entries.some(function (e) { return e.isIntersecting; })) return;
+      box._io.disconnect(); box.dataset.seen = '1';
+      cb();
+    }, { rootMargin: '300px 0px' });
+    box._io.observe(box);
+  }
+
   function drawMap(kind) {
+    var box = document.getElementById('miniMap');
+    if (kind === 'mini' && box && box.dataset.seen !== '1') {
+      return whenMiniVisible(function () { drawMap('mini'); });
+    }
     var canvasId = kind === 'mini' ? 'miniMapCanvas' : 'fullMapCanvas';
     var pts = dayPoints(), route = routeOf(pts);
     return MapKit.ready().then(function () {
@@ -381,12 +403,6 @@
       v.render({ points: pts, route: route, onPinClick: kind === 'full' ? function (id) { openSheet(id, S.day); } : null });
     });
   }
-  // Google 인증 실패 등으로 공급자가 바뀌면 열린 지도를 다시 그림
-  MapKit.onFallback(function () {
-    S.maps = {};
-    if (!$('#viewMain').hidden) drawMap('mini');
-    if (!$('#fullMap').hidden) drawMap('full');
-  });
 
   // Google 지도 앱/웹에서 이 날의 경로 열기 (API 키 불필요)
   function dayRouteUrl() {

@@ -72,7 +72,7 @@
 - 미니 지도: '지도 크게 보기'를 우상단으로 이동(저작권 표기 가림 해소), 키보드(Tab → Enter/Space)로 열기 가능
 - 호버·포커스(`:focus-visible`) 스타일 추가
 
-## 6. 지도: Google Maps 전환 (2026-11-22)
+## 6. 지도: Google Maps 전환 (2026-11-22) — ⚠ 같은 날 철회, §8 참고
 - 사유(사용자): 사용자들이 Google 지도에 익숙하고, 기존 지도는 확대 시 위치 가늠이 어려움
 - `js/map.js` MapKit: 공급자 Google Maps JavaScript API(Advanced Marker + Polyline) → 실패 시 Leaflet/OSM → SVG
 - 유지 기능: 번호 핀(택1 회색·운영 종료 연회색), 같은 좌표 라벨 병합, 점선 경로(택1 제외, 선택형 날은 없음), fitBounds(최대 줌 15), 미니 지도 조작 불가 + 클릭 시 전체 화면, 전체 지도 핀 클릭 → 장소 시트, 핀 툴팁(장소명)
@@ -83,3 +83,15 @@
 - 트래킹: `click_open_google_maps` (type: place/route)
 - 현재 `googleApiKey` 미입력 → 화면 지도는 OSM, Google 링크만 동작
 - (2026-11-22 버그 수정) 지도 컨테이너(`.mini-map`, `.fullmap__map`)는 `isolation: isolate; z-index: 0` 로 쌓임 맥락을 격리해야 함. 지도 라이브러리 내부 z-index(Leaflet 400~1000)가 새어 나와 작은 지도가 전체 화면 지도·바텀시트·모달·토스트 위로 올라오던 문제. 지도 공급자를 바꾸거나 새 지도 영역을 추가할 때도 동일하게 적용할 것
+
+## 7. Google Maps 키 보관·사용량 정책 (2026-11-22) — ⚠ 철회, §8 참고
+- 키·Map ID는 `js/config.local.js`(gitignore)에만 보관. 문서·로그·메모리에 기록 금지
+- 사용자 Cloud 설정: 리퍼러 제한(배포 사이트만), API 제한(Maps JavaScript API만), 무료 사용량 범위, 초과 시 키 사용 차단 예정 → 차단되면 대체 지도(OSM)
+- 차단·초과 감지: gm_authFailure + 오류 화면 요소(.gm-err-*, .dismissButton) 감시 + 로드 제한 시간(15초) → 대체 지도 전환, 30분간 같은 탭에서 Google 재시도 안 함
+- 지도 로드 절약: 작은 지도 지연 생성(IntersectionObserver, 300px 전), 지도 객체 재사용
+
+## 8. 지도 최종 정책 (2026-11-22, §6·§7 대체)
+- Google Maps JavaScript API·API 키·Map ID **사용 금지** (사용량 원천 차단 방법이 확실하지 않음)
+- 키 파일(`js/config.local.js`)·예시 파일 삭제, Google API 로더·인증 실패 감지·Advanced Marker 코드 제거
+- 화면 지도: OpenStreetMap (번호 핀, 점선 경로, 전체 화면 지도, 핀 클릭 → 장소 시트 그대로)
+- 유지: 전체 화면 지도 "Google 지도로 경로 보기", 장소 시트 "Google 지도에서 보기" (Maps URLs, 키 없음·과금 없음)

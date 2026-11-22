@@ -27,7 +27,7 @@ tools/make_icons.py  PNG·ICO 재생성 스크립트 (표준 라이브러리만 
 js/i18n.js        UI 문자열 사전 + t()
 js/data.js        Mock 데이터 (가이드 상세, POI 좌표, 일차별 코스, 내 일정)
 js/api.js         Mock API (가이드·코스 조회, 로컬 북마크) + track() 이벤트 로그
-js/map.js         지도 공급자 추상화 MapKit (Google Maps → OpenStreetMap → SVG 자동 대체) + Google 지도 링크 생성
+js/map.js         지도 MapKit (OpenStreetMap → SVG) + Google 지도 링크(키 불필요) 생성
 js/itinerary.js   내 일정 로컬 저장소(localStorage) + 내보내기(텍스트/공유/.ics/.json)
 js/app.js         렌더링·인터랙션
 ```
@@ -46,11 +46,8 @@ js/app.js         렌더링·인터랙션
 - 2026-11-22 사용자 요청으로 둘 다 비활성화. 코드는 남아 있으니 다시 쓰려면 값만 `true`로 변경.
 - 새 기능도 켜고 끌 필요가 있으면 같은 방식으로 플래그를 추가할 것.
 
-## 지도 (Google Maps) 설정 — `js/config.js` 의 `MAP_CONFIG`
-- `googleApiKey` 가 비어 있으면 OpenStreetMap으로 표시됨 (현재 상태). 키를 넣으면 Google 지도로 전환
-- 키 발급: Google Cloud 콘솔 → 프로젝트 생성 → 결제 계정 연결 → "Maps JavaScript API" 사용 설정 → 사용자 인증 정보에서 API 키 생성
-- 키 제한 필수: 애플리케이션 제한 = 웹사이트(HTTP 리퍼러), 실제 배포 도메인 + `http://localhost:*/*` 등록 / API 제한 = Maps JavaScript API
-- 리퍼러 제한 키는 `file://` 로 열면 동작하지 않음 → 로컬은 `python -m http.server` 로 확인
-- `googleMapId`: 운영 시 Cloud 콘솔 '지도 관리'에서 Map ID 발급 권장 (비우면 개발용 DEMO_MAP_ID)
-- 키 오류·결제 미설정 시 `gm_authFailure` 로 감지해 OpenStreetMap으로 자동 전환
-- "Google 지도에서 보기 / 경로 보기" 링크는 키 없이 동작 (POI의 `gq` 일본어 검색어 사용)
+## 지도 정책 (2026-11-22 확정)
+- **Google Maps JavaScript API·API 키·Map ID 사용 금지.** 사용량 상한을 확실히 걸 수 없어 과금 위험이 있다는 사용자 결정. 다시 도입하자는 제안을 먼저 하지 말 것
+- 화면 지도: OpenStreetMap(Leaflet) → 실패 시 SVG 간략 경로 (`js/map.js`)
+- Google 지도는 키가 필요 없는 링크(Maps URLs)로만 연결: 장소 시트 "Google 지도에서 보기", 전체 지도 "Google 지도로 경로 보기" (POI `gq` 일본어 검색어 사용)
+- 작은 지도는 스크롤로 근처에 왔을 때 지연 생성

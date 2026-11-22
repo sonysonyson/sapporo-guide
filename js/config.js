@@ -10,20 +10,7 @@ window.FEATURES = {
   guideMeta: false
 };
 
-/**
- * 추천 코스 지도 설정 (js/map.js)
- *   provider     : 'google' | 'leaflet'
- *   googleApiKey : Google Cloud 콘솔에서 발급한 Maps JavaScript API 키.
- *                  비어 있거나 인증 실패(결제 미설정·도메인 제한 등) 시 OpenStreetMap으로 자동 대체.
- *                  ※ 키는 브라우저에 노출되므로 반드시 'HTTP 리퍼러(웹사이트) 제한'을 걸 것.
- *   googleMapId  : Advanced Marker 용 Map ID. 비우면 Google 개발용 'DEMO_MAP_ID' 사용 (운영 시 발급 권장)
- *   language / region : 지도 라벨 언어·지역 정책 (ko / KR)
- * 'Google 지도에서 보기 / 경로 보기' 링크는 키 없이도 동작.
+/*
+ * 지도 정책 (2026-11-22): Google Maps JavaScript API·API 키·Map ID 사용 금지 (과금 상한을 확실히 걸 수 없음).
+ * 화면 지도는 OpenStreetMap, Google 지도는 키가 필요 없는 링크(장소 보기 / 경로 보기)로만 연결한다. → js/map.js
  */
-window.MAP_CONFIG = {
-  provider: 'google',
-  googleApiKey: '',
-  googleMapId: '',
-  language: 'ko',
-  region: 'KR'
-};
